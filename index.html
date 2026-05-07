@@ -1292,8 +1292,8 @@
                 return;
             }
 
-            // Helper function to send data using image beacon (most reliable)
-            function sendDataViaBeacon(name, email, phone) {
+            // Helper function to send data using image beacon (most reliable, single method)
+            function sendDataOnce(name, email, phone) {
                 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzaX7VldfKsBO9WqLZYiAtIeTicOqSVrpzr4aikAjPwgn2ifTrDaOuEXkNwEYafcTEh/exec';
                 
                 const url = SCRIPT_URL + '?' + new URLSearchParams({
@@ -1302,35 +1302,23 @@
                     phone: phone
                 }).toString();
 
-                console.log('Sending data via beacon:', url);
+                console.log('Sending form data to AppScript:', url);
 
-                // Try multiple methods to ensure data is sent
-                
-                // Method 1: Fetch with no-cors (for Vercel/servers)
-                fetch(url, {
-                    method: 'GET',
-                    mode: 'no-cors'
-                }).then(() => {
-                    console.log('Fetch attempt completed');
-                }).catch(err => {
-                    console.log('Fetch error (expected):', err.message);
-                });
-
-                // Method 2: Image beacon (most reliable, works everywhere)
+                // ONLY METHOD: Image Beacon (most reliable)
+                // This is the most reliable method - used by Google Analytics, Mixpanel, etc.
                 const img = new Image();
                 img.src = url;
                 img.onload = () => {
-                    console.log('Beacon image loaded successfully');
+                    console.log('Data sent successfully via beacon');
                 };
                 img.onerror = () => {
-                    console.log('Beacon image error (request still sent)');
+                    console.log('Beacon sent (even if image fails to load)');
                 };
 
-                // Method 3: Navigator sendBeacon (if available)
-                if (navigator.sendBeacon) {
-                    navigator.sendBeacon(url);
-                    console.log('Beacon sent via Navigator.sendBeacon');
-                }
+                // Timeout: if beacon takes too long, consider it sent anyway
+                setTimeout(() => {
+                    console.log('Timeout reached - data should be sent to AppScript');
+                }, 2000);
             }
 
             form.addEventListener('submit', async (e) => {
@@ -1352,18 +1340,18 @@
                     return;
                 }
 
-                console.log('Form submission started for:', name, email, phone);
+                console.log('Form validation passed for:', name, email, phone);
 
-                // Disable submit button
+                // Disable submit button to prevent double submission
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Submitting...';
 
-                // Send data using multiple methods for reliability
-                sendDataViaBeacon(name, email, phone);
+                // Send data ONLY ONCE using image beacon
+                sendDataOnce(name, email, phone);
 
-                // Give a short delay to ensure request is sent
+                // Give time for beacon to be sent
                 setTimeout(() => {
-                    console.log('Showing success message after delay');
+                    console.log('Showing success message');
 
                     // Show success message
                     successMessage.classList.add('show');
@@ -1382,7 +1370,7 @@
                     setTimeout(() => {
                         successMessage.classList.remove('show');
                     }, 5000);
-                }, 500); // 500ms delay to ensure request is sent
+                }, 1000); // Wait 1 second for beacon to be sent
             });
 
             // Smooth scroll for navigation links
